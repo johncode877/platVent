@@ -1,0 +1,31 @@
+{
+  "name": "plat-vent",
+  "version": "1.0.0",
+  "description": "Plataforma de Ventas usando smart contracts",
+  "main": "index.js",
+  "scripts": {
+    "start": "webpack server --open"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^2.0.1",
+    "@nomiclabs/hardhat-etherscan": "^3.1.5",
+    "@openzeppelin/hardhat-upgrades": "^1.22.1",
+    "chai": "^4.3.7",
+    "hardhat": "^2.12.6",
+
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.7",
+    "html-webpack-plugin": "^5.5.0",
+    "webpack": "^5.70.0",
+    "webpack-cli": "^4.9.2",
+    "webpack-dev-server": "^4.7.4"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.8.1",
+    "@openzeppelin/contracts-upgradeable": "^4.8.1",
+    "dotenv": "^16.0.3",
+    "utec-smart-contracts": "^0.0.2"
+  }
+}
