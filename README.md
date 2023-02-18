@@ -19,4 +19,3 @@ Planteamos desarrollar una plataforma innovadora que abarque tanto la parte log�
  La confiabilidad y seguridad que ofrece blockchain la trasladamos a tu mano.
  Facilitamos visión 360º de la cadena de suministros.
 
-
