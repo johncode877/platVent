@@ -290,7 +290,7 @@ describe("CATALOGO PRODUCTOS TESTING", function () {
     });
 
     it("No se puede crear Orden si no existe producto", async () => {
-
+      
       // usuario tiene suficiente credito para comprar
       // acuñar tokens a favor de alice 
       await alxiriSC.mint(
@@ -298,11 +298,14 @@ describe("CATALOGO PRODUCTOS TESTING", function () {
         ethers.utils.parseEther("100")
       );
 
+      
       // usuario dio permisos a OrdenCompra para que use sus AlxiriTokens
       const approveOrdenCompra = alxiriSC.connect(bob).functions["approve(address,uint256)"];
       await approveOrdenCompra(ordenCompraSC.address, 100);
+     
+      await catalogoSC.grantRole(PRODUCT_ROLE, ordenCompraSC.address);
 
-      await expect(ordenCompraSC.connect(bob).hacerPedido("polo", 100, "Lince/Av Arenales 1120"))
+      await expect(ordenCompraSC.connect(bob).hacerPedidoPorId(3, 100, "Lince/Av Arenales 1120"))
         .to.revertedWith('El producto no existe o no esta registrado');
 
     });
@@ -320,7 +323,7 @@ describe("CATALOGO PRODUCTOS TESTING", function () {
       const approveOrdenCompra = alxiriSC.connect(bob).functions["approve(address,uint256)"];
       await approveOrdenCompra(ordenCompraSC.address, 100);
 
-      await expect(ordenCompraSC.connect(bob).hacerPedido("pijamas", 10000, "Lince/Av Arenales 1120"))
+      await expect(ordenCompraSC.connect(bob).hacerPedidoPorId(1, 10000, "Lince/Av Arenales 1120"))
         .to.revertedWith('Cantidad invalida o no hay stock suficiente');
     });
 
@@ -340,7 +343,7 @@ describe("CATALOGO PRODUCTOS TESTING", function () {
 
       // usuario debe tener 90 = 3 x 30 Alxiris 
       // para poder comprar las 30 pijamas
-      await expect(ordenCompraSC.connect(bob).hacerPedido("pijamas", 30, "Lince/Av Arenales 1120"))
+      await expect(ordenCompraSC.connect(bob).hacerPedidoPorId(1, 30, "Lince/Av Arenales 1120"))
         .to.revertedWith('OrdenCompra: Not enough allowance');
     });
 
@@ -361,7 +364,7 @@ describe("CATALOGO PRODUCTOS TESTING", function () {
 
       // usuario debe tener 90 = 3 x 30 Alxiris 
       // para poder comprar las 30 pijamas
-      await expect(ordenCompraSC.connect(bob).hacerPedido("pijamas", 30, "Lince/Av Arenales 1120"))
+      await expect(ordenCompraSC.connect(bob).hacerPedidoPorId(1, 30, "Lince/Av Arenales 1120"))
         .to.revertedWith(`AccessControl: account ${ordenCompraSC.address.toLowerCase()} is missing role ${PRODUCT_ROLE}`);
     });
 
@@ -385,7 +388,7 @@ describe("CATALOGO PRODUCTOS TESTING", function () {
 
       const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 
-      await expect(ordenCompraSC.connect(bob).hacerPedido("pijamas", 30, "Lince/Av Arenales 1120"))
+      await expect(ordenCompraSC.connect(bob).hacerPedidoPorId(1, 30, "Lince/Av Arenales 1120"))
         .to.emit(ordenCompraSC, "RegistraPedido")
         .withArgs(0, bob.address, anyValue, "pijamas", 30);
 
@@ -413,7 +416,7 @@ describe("CATALOGO PRODUCTOS TESTING", function () {
 
       const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 
-      await expect(ordenCompraSC.connect(bob).hacerPedido("pijamas", 30, "Lince/Av Arenales 1120"))
+      await expect(ordenCompraSC.connect(bob).hacerPedidoPorId(1, 30, "Lince/Av Arenales 1120"))
         .to.emit(ordenCompraSC, "RegistraPedido")
         .withArgs(0, bob.address, anyValue, "pijamas", 30);
 
@@ -445,7 +448,7 @@ describe("CATALOGO PRODUCTOS TESTING", function () {
 
       const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 
-      await expect(ordenCompraSC.connect(bob).hacerPedido("pijamas", 30, "Lince/Av Arenales 1120"))
+      await expect(ordenCompraSC.connect(bob).hacerPedidoPorId(1, 30, "Lince/Av Arenales 1120"))
         .to.emit(ordenCompraSC, "RegistraPedido")
         .withArgs(0, bob.address, anyValue, "pijamas", 30);
 
@@ -477,7 +480,7 @@ describe("CATALOGO PRODUCTOS TESTING", function () {
 
       const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 
-      await expect(ordenCompraSC.connect(bob).hacerPedido("pijamas", 30, "Lince/Av Arenales 1120"))
+      await expect(ordenCompraSC.connect(bob).hacerPedidoPorId(1, 30, "Lince/Av Arenales 1120"))
         .to.emit(ordenCompraSC, "RegistraPedido")
         .withArgs(0, bob.address, anyValue, "pijamas", 30);
 
@@ -520,7 +523,7 @@ describe("CATALOGO PRODUCTOS TESTING", function () {
 
       const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 
-      await expect(ordenCompraSC.connect(bob).hacerPedido("pijamas", 30, "Lince/Av Arenales 1120"))
+      await expect(ordenCompraSC.connect(bob).hacerPedidoPorId(1, 30, "Lince/Av Arenales 1120"))
         .to.emit(ordenCompraSC, "RegistraPedido")
         .withArgs(0, bob.address, anyValue, "pijamas", 30);
 
@@ -563,7 +566,7 @@ describe("CATALOGO PRODUCTOS TESTING", function () {
 
       const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 
-      await expect(ordenCompraSC.connect(bob).hacerPedido("pijamas", 30, "Lince/Av Arenales 1120"))
+      await expect(ordenCompraSC.connect(bob).hacerPedidoPorId(1, 30, "Lince/Av Arenales 1120"))
         .to.emit(ordenCompraSC, "RegistraPedido")
         .withArgs(0, bob.address, anyValue, "pijamas", 30);
 
@@ -626,7 +629,7 @@ describe("CATALOGO PRODUCTOS TESTING", function () {
 
       const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 
-      await expect(ordenCompraSC.connect(bob).hacerPedido("pijamas", 30, "Lince/Av Arenales 1120"))
+      await expect(ordenCompraSC.connect(bob).hacerPedidoPorId(1, 30, "Lince/Av Arenales 1120"))
         .to.emit(ordenCompraSC, "RegistraPedido")
         .withArgs(0, bob.address, anyValue, "pijamas", 30);
 

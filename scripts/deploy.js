@@ -208,7 +208,7 @@ async function updateOrdenCompra() {
 
   var ordenCompraUpgrade = await upgrades.upgradeProxy(OrdenCompraProxyAdd, OrdenCompraUpgrade);
   try {
-    await ordenCompraUpgrade.deployTransaction.wait(3);
+    await ordenCompraUpgrade.deployTransaction.wait(2);
   } catch (error) {
     console.log(error);
   }
@@ -241,10 +241,10 @@ async function updateOrdenCompra() {
 //configOrdenCompraSC()
 //verOrdenesCreadas()
 //mintearAlxiriCoin()
-//updateOrdenCompra()
+updateOrdenCompra()
 
 //asignarRoldeWorkflowyCourierRole()
-asignarRoldeWorkflowyCourierRoleToLuis()
+//asignarRoldeWorkflowyCourierRoleToLuis()
   //atenderPedidoArea2()
   //atenderPedidoArea3()
   //entregaPedido()

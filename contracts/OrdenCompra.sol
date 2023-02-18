@@ -112,6 +112,7 @@ contract OrdenCompra is
 
     address _alxiricoinAdd;
     address _catalogoAdd;
+    mapping(address => Orden[]) ordenesCliente;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -246,90 +247,6 @@ contract OrdenCompra is
         return indice;
     }
 
-    /// @notice Permite que el cliente pueda hacer un pedido
-    /// @param _nombre nombre del producto
-    /// @param _cantidad cantidad de productos a comprar
-    /// @param envio direccion de envio
-    /// @return El id del pedido
-    function hacerPedido(
-        string memory _nombre,
-        uint256 _cantidad,
-        string memory envio
-    ) external returns (uint256) {
-        ProductoDetail memory item = catalogo.verDetalleProducto(_nombre);
-
-        require(
-            item.total >= _cantidad,
-            "Cantidad invalida o no hay stock suficiente"
-        );
-        uint256 precioTotal = item.precio * _cantidad;
-        uint256 allowance = alxiricoin.allowance(msg.sender, address(this));
-        require(allowance >= precioTotal, "OrdenCompra: Not enough allowance");
-
-        uint256 balance = alxiricoin.balanceOf(msg.sender);
-        require(
-            balance >= precioTotal,
-            "OrdenCompra: Not enough token balance"
-        );
-
-        alxiricoin.transferFrom(msg.sender, address(this), precioTotal);
-
-        uint256 _fecha = block.timestamp;
-
-        uint256 indice = listaOrdenes.length;
-
-        Orden memory orden = Orden({
-            producto: item.nombre,
-            cantidad: _cantidad,
-            fecha: _fecha,
-            estado: 1,
-            cliente: msg.sender,
-            envio: envio
-        });
-
-        item.total = item.total - _cantidad;
-
-        bool resActProd = catalogo.actualizarProducto(
-            item.nombre,
-            item.total,
-            0
-        );
-        require(resActProd, "CatalogoProducto: No se pudo actualizar");
-
-        listaOrdenes.push(orden);
-
-        // se registra la orden en el flujo de fabricacion del producto
-        Tracking memory tracking = Tracking({
-            orden: indice,
-            from: "compras",
-            to: "corte",
-            arrival: 0,
-            departure: _fecha,
-            estado: 1
-        });
-
-        listaTracking.push(tracking);
-
-        emit RegistraPedido(
-            indice,
-            msg.sender,
-            _fecha,
-            orden.producto,
-            orden.cantidad
-        );
-
-        emit Envio(
-            indice,
-            tracking.from,
-            tracking.to,
-            orden.cliente,
-            _fecha,
-            orden.producto,
-            orden.cantidad
-        );
-
-        return indice;
-    }
 
     /// @notice Permite que el cliente pueda hacer seguimiento(tracking)
     /// @param idOrden identificador de la orden
@@ -376,12 +293,40 @@ contract OrdenCompra is
         return true;
     }
 
+    /// @notice Permite que las ordenes generadas por cliente
+    /// @param cliente address del cliente
+    /// @return listaOrdenesPorCliente la lista de ordenes 
+    function obtenerOrdenes(
+        address cliente
+    ) public view returns (Orden[] memory) {
+        
+        Orden memory orden;
+        uint256 count=0;
+        uint256 count2=0;
+
+        for (uint256 k = 0; k < listaOrdenes.length; k++) {
+            orden = listaOrdenes[k];
+            if (orden.cliente == cliente) {
+                count++;
+            }
+        }
+        Orden[] memory listaOrdenesPorCliente = new Orden[](count);
+         for (uint256 r = 0; r < listaOrdenes.length; r++) {
+            orden = listaOrdenes[r];
+            if (orden.cliente == cliente) {
+               listaOrdenesPorCliente[count2] = orden;
+               count2++;
+            }
+         }
+
+        return listaOrdenesPorCliente;
+    }
+
     /// @notice Permite registrar la entrega del pedido al cliente
-    ///         los usuarios con rol COURIER_ROLE pueden utilizar este 
+    ///         los usuarios con rol COURIER_ROLE pueden utilizar este
     ///         metodo
     /// @param idOrden identificador de la orden
     /// @return indicador si la operacion de ejecuto correctamente
-     
     function entregarCliente(
         uint256 idOrden
     ) external onlyRole(COURIER_ROLE) returns (bool) {
