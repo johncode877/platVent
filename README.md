@@ -14,9 +14,9 @@ La adopción de plataformas de computación distribuida basadas en blockchain es
 Planteamos desarrollar una plataforma innovadora que abarque tanto la parte logística y ventas a nivel B2B y B2C.
 
 # Porque PlatVent?
-● Facilidad de vender y comprar sin exponer tu información por la Red convencional.
-● Ecosistema basado en Tokens digitales en las transacciones.
-● La confiabilidad y seguridad que ofrece blockchain la trasladamos a tu mano.
-● Facilitamos visión 360º de la cadena de suministros.
+ Facilidad de vender y comprar sin exponer tu información por la Red convencional.
+ Ecosistema basado en Tokens digitales en las transacciones.
+ La confiabilidad y seguridad que ofrece blockchain la trasladamos a tu mano.
+ Facilitamos visión 360º de la cadena de suministros.
 
 
