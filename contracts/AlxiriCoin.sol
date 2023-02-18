@@ -5,6 +5,12 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
 
+/// @title Token para transacciones en la plataforma 
+/// @author John Neil Sevillano Colina
+/// @author Luis Gangas Vasquez
+/// @author Segundo Humberto Melendez Fernandez
+/// @notice Puedes usar este contrato para realizar pagos en la compra de productos 
+/// @custom:experimental Este es un contrato a modo de prueba.
 contract AlxiriCoin is ERC20, AccessControl {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 

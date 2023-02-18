@@ -110,6 +110,11 @@ describe("CATALOGO PRODUCTOS TESTING", function () {
 
     });
 
+
+
+
+
+
     it("Actualiza producto, si tiene permiso ", async () => {
 
       // se agrega producto por primera vez
@@ -150,7 +155,7 @@ describe("CATALOGO PRODUCTOS TESTING", function () {
         .to.revertedWith('El producto no existe o no esta registrado');
     });
 
-    it("Se intenta registrar un producto con valor incorrecto", async () => {
+    it("Se intenta registrar un producto con valor incorrecto del stock", async () => {
       const producto = { nombre: "polo_manga_larga", descripcion: "polos de algodon de diferentes colores", total: 0, estado: 0, precio: 1 };
 
       await catalogoSC.grantRole(PRODUCT_ROLE, alice.address);
@@ -158,6 +163,16 @@ describe("CATALOGO PRODUCTOS TESTING", function () {
       await expect(catalogoSC.connect(alice).agregarProducto(producto))
         .to.revertedWith('Se debe ingresar un valor correcto para el parametro total');
     });
+
+    it("Se intenta registrar un producto con valor incorrecto del precio unitario", async () => {
+      const producto = { nombre: "polo_manga_larga", descripcion: "polos de algodon de diferentes colores", total: 100, estado: 0, precio: 0 };
+
+      await catalogoSC.grantRole(PRODUCT_ROLE, alice.address);
+
+      await expect(catalogoSC.connect(alice).agregarProducto(producto))
+        .to.revertedWith('Se debe ingresar un valor correcto para el precio unitario');
+    });
+
 
     it("Se intenta actualizar un producto con valor incorrecto y mantiene su valor actual", async () => {
       const producto = { nombre: "polo_manga_larga", descripcion: "polos de algodon de diferentes colores", total: 5000, estado: 0, precio: 1 };
@@ -177,7 +192,90 @@ describe("CATALOGO PRODUCTOS TESTING", function () {
 
     });
 
+    it("Se intenta actualizar un producto que no esta registrado", async () => {
+      await catalogoSC.grantRole(PRODUCT_ROLE, alice.address);
+
+      const productoUpdate = { nombre: "polo", descripcion: "polos de algodon de diferentes colores", total: 100, estado: 0, precio: 1 };
+
+      await expect(catalogoSC.connect(alice).actualizarProducto(productoUpdate.nombre, productoUpdate.total, productoUpdate.precio))
+        .to.revertedWith('El producto no esta registrado');
+
+
+
+    });
+
+
+    it("Se intenta actualizar un producto por Id con valores incorrectos para total y precio y mantiene su valor actual", async () => {
+      const producto = { nombre: "polo_manga_larga", descripcion: "polos de algodon de diferentes colores", total: 5000, estado: 0, precio: 1 };
+
+      await catalogoSC.grantRole(PRODUCT_ROLE, alice.address);
+
+      // se agrega producto
+      await catalogoSC.connect(alice).agregarProducto(producto);
+
+      const productoUpdate = { nombre: "polo_manga_larga", descripcion: "polos de algodon de diferentes colores", total: 0, estado: 0, precio: 1 };
+      const idProduct = 0;
+      await catalogoSC.connect(alice).actualizarProductoPorId(idProduct, productoUpdate.total, productoUpdate.precio);
+
+      let productos = await catalogoSC.connect(alice).obtenerTodos();
+      expect(productos[0].total).to.equal(producto.total);
+      expect(productos[0].precio).to.equal(producto.precio);
+
+    });
+
+
+
+    it("Se intenta actualizar un producto por Id que no esta registrado", async () => {
+      await catalogoSC.grantRole(PRODUCT_ROLE, alice.address);
+
+      const productoUpdate = { nombre: "polo", descripcion: "polos de algodon de diferentes colores", total: 100, estado: 0, precio: 1 };
+      const idProduct = 0;
+
+      await expect(catalogoSC.connect(alice).actualizarProductoPorId(idProduct, productoUpdate.total, productoUpdate.precio))
+        .to.revertedWith('El producto no esta registrado');
+
+
+
+    });
+
+
+    it("Se intenta ver el detalle de un producto por Id que no esta registrado", async () => {
+      await catalogoSC.grantRole(PRODUCT_ROLE, alice.address);
+
+      const idProduct = 0;
+
+      await expect(catalogoSC.connect(alice).verDetalleProductoPorId(idProduct))
+        .to.revertedWith('El producto no existe o no esta registrado');
+
+
+    });
+
+    it("Se logra ver el detalle de un producto por Id que esta registrado", async () => {
+
+      const producto = { nombre: "polo_manga_larga", descripcion: "polos de algodon de diferentes colores", total: 2000, estado: 0, precio: 1 };
+
+      await catalogoSC.grantRole(PRODUCT_ROLE, alice.address);
+
+      // se agrega producto
+      await catalogoSC.connect(alice).agregarProducto(producto);
+
+      //let productos = await catalogoSC.connect(alice).obtenerTodos();
+      //expect(productos[0].nombre).to.equal("polo_manga_larga");
+      //expect(productos[0].precio).to.equal(1);
+
+      const idProduct = 0;
+      let productoItem = await catalogoSC.connect(alice).verDetalleProductoPorId(idProduct);
+      expect(productoItem.nombre).to.equal("polo_manga_larga");
+      expect(productoItem.precio).to.equal(1);
+
+    });
+
+
+
+
+
   });
+
 
 
   describe("ORDENES DE COMPRA Smart Contract", () => {
@@ -507,8 +605,53 @@ describe("CATALOGO PRODUCTOS TESTING", function () {
     });
 
 
+    it("Se hace seguimiento a una orden", async () => {
+
+      // usuario tiene suficiente credito para comprar
+      // acuñar tokens a favor de alice 
+      await alxiriSC.mint(
+        bob.address,
+        ethers.utils.parseEther("90")
+      );
+
+      // usuario dio permisos a OrdenCompra para que use sus AlxiriTokens
+      const approveOrdenCompra = alxiriSC.connect(bob).functions["approve(address,uint256)"];
+      await approveOrdenCompra(ordenCompraSC.address, 90);
+
+      // asignar rol PRODUCT_ROLE al contrato OrdenCompra en CatalogoProducto 
+      await catalogoSC.grantRole(PRODUCT_ROLE, ordenCompraSC.address);
+
+      // asignar rol a carl para que pueda atender el pedido  
+      await ordenCompraSC.grantRole(WORKFLOW_ROLE, carl.address);
+
+      const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
+
+      await expect(ordenCompraSC.connect(bob).hacerPedido("pijamas", 30, "Lince/Av Arenales 1120"))
+        .to.emit(ordenCompraSC, "RegistraPedido")
+        .withArgs(0, bob.address, anyValue, "pijamas", 30);
+
+      await expect(ordenCompraSC.connect(carl).atenderPedido(0))
+        .to.emit(ordenCompraSC, "Envio")
+        .withArgs(0, "corte", "acabados", bob.address, anyValue, "pijamas", 30);
+
+      let trackingItem = await ordenCompraSC.connect(bob).seguimiento(0);
+      expect(trackingItem.orden).to.equal(0);
+      expect(trackingItem.estado).to.equal(1);
+
+
+    });
+
+
+    it("Se registra las secuencias de transferencia para procesar un producto", async () => {
+
+      await ordenCompraSC.connect(bob).setTransfer("area1", "area2");
+
+
+    });
+
 
 
   });
+
 
 });

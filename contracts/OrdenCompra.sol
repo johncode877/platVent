@@ -17,6 +17,10 @@ struct ProductoDetail {
 }
 
 interface ICatalogoProducto {
+    function verDetalleProductoPorId(
+        uint256 _id
+    ) external returns (ProductoDetail memory productoDetail);
+
     function verDetalleProducto(
         string memory _nombre
     ) external returns (ProductoDetail memory productoDetail);
@@ -26,8 +30,21 @@ interface ICatalogoProducto {
         uint256 _newTotal,
         uint256 _precio
     ) external returns (bool);
+
+    function actualizarProductoPorId(
+        uint256 _id,
+        uint256 _newTotal,
+        uint256 _precio
+    ) external returns (bool);
 }
 
+/// @title Orden de Compra
+/// @author John Neil Sevillano Colina
+/// @author Luis Gangas Vasquez
+/// @author Segundo Humberto Melendez Fernandez
+/// @notice Puedes usar este contrato para gestionar la atencion
+//           de las ordenes de compra asi como el seguimiento del pedido
+/// @custom:experimental Este es un contrato a modo de prueba.
 contract OrdenCompra is
     Initializable,
     AccessControlUpgradeable,
@@ -91,11 +108,13 @@ contract OrdenCompra is
 
     Orden[] listaOrdenes;
     Tracking[] listaTracking;
+    string courier;
+
+    address _alxiricoinAdd;
+    address _catalogoAdd;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
-
-    string courier;
 
     function initialize() public initializer {
         __Pausable_init();
@@ -113,22 +132,125 @@ contract OrdenCompra is
         transferencias["despacho"] = "cliente";
     }
 
-    // define la secuencia de areas/locaciones
-    // por donde circulara el pedido antes
-    // de ser enviado al cliente
+    /// @notice Permite definir la secuencia de areas o locaciones
+    //          internas de una empresa, por las que circulara
+    //          el pedido antes de ser enviado al cliente
+    /// @param from el area origen
+    /// @param to el area destino
     function setTransfer(string memory from, string memory to) external {
         transferencias[from] = to;
     }
 
-    function setAlxiriAdd(address _alxiricoinAdd) external {
-        alxiricoin = IERC20(_alxiricoinAdd);
+    function setAlxiriAdd(address alxiricoinAdd) external {
+        alxiricoin = IERC20(alxiricoinAdd);
+        _alxiricoinAdd = alxiricoinAdd;
     }
 
-    function setCatalogoAdd(address _catalogoAdd) external {
-        catalogo = ICatalogoProducto(_catalogoAdd);
+    function setCatalogoAdd(address catalogoAdd) external {
+        catalogo = ICatalogoProducto(catalogoAdd);
+        _catalogoAdd = catalogoAdd;
     }
 
-    // funcion para el cliente
+    function getAlxiriAdd() external view returns (address) {
+        return _alxiricoinAdd;
+    }
+
+    function getCatalogoAdd() external view returns (address) {
+        return _catalogoAdd;
+    }
+
+    /// @notice Permite que el cliente pueda hacer un pedido
+    /// @param _idProduct identificador del producto
+    /// @param _cantidad cantidad de productos a comprar
+    /// @param envio direccion de envio
+    /// @return El id del pedido
+    function hacerPedidoPorId(
+        uint256 _idProduct,
+        uint256 _cantidad,
+        string memory envio
+    ) external returns (uint256) {
+        ProductoDetail memory item = catalogo.verDetalleProductoPorId(
+            _idProduct
+        );
+
+        require(
+            item.total >= _cantidad,
+            "Cantidad invalida o no hay stock suficiente"
+        );
+        uint256 precioTotal = item.precio * _cantidad;
+        uint256 allowance = alxiricoin.allowance(msg.sender, address(this));
+        require(allowance >= precioTotal, "OrdenCompra: Not enough allowance");
+
+        uint256 balance = alxiricoin.balanceOf(msg.sender);
+        require(
+            balance >= precioTotal,
+            "OrdenCompra: Not enough token balance"
+        );
+
+        alxiricoin.transferFrom(msg.sender, address(this), precioTotal);
+
+        uint256 _fecha = block.timestamp;
+
+        uint256 indice = listaOrdenes.length;
+
+        Orden memory orden = Orden({
+            producto: item.nombre,
+            cantidad: _cantidad,
+            fecha: _fecha,
+            estado: 1,
+            cliente: msg.sender,
+            envio: envio
+        });
+
+        item.total = item.total - _cantidad;
+
+        bool resActProd = catalogo.actualizarProductoPorId(
+            _idProduct,
+            item.total,
+            0
+        );
+        require(resActProd, "CatalogoProducto: No se pudo actualizar");
+
+        listaOrdenes.push(orden);
+
+        // se registra la orden en el flujo de fabricacion del producto
+        Tracking memory tracking = Tracking({
+            orden: indice,
+            from: "compras",
+            to: "corte",
+            arrival: 0,
+            departure: _fecha,
+            estado: 1
+        });
+
+        listaTracking.push(tracking);
+
+        emit RegistraPedido(
+            indice,
+            msg.sender,
+            _fecha,
+            orden.producto,
+            orden.cantidad
+        );
+
+        emit Envio(
+            indice,
+            tracking.from,
+            tracking.to,
+            orden.cliente,
+            _fecha,
+            orden.producto,
+            orden.cantidad
+        );
+
+        return indice;
+    }
+
+    /// @notice Permite que el cliente pueda hacer un pedido
+    /// @param _nombre nombre del producto
+    /// @param _cantidad cantidad de productos a comprar
+    /// @param envio direccion de envio
+    /// @return El id del pedido
     function hacerPedido(
         string memory _nombre,
         uint256 _cantidad,
@@ -209,15 +331,22 @@ contract OrdenCompra is
         return indice;
     }
 
-    // funcion para el cliente
-    function seguimiento(uint256 idOrden) external returns (Tracking memory) {
+    /// @notice Permite que el cliente pueda hacer seguimiento(tracking)
+    /// @param idOrden identificador de la orden
+    /// @return objeto Tracking
+    function seguimiento(
+        uint256 idOrden
+    ) public view returns (Tracking memory) {
         require(listaTracking.length > idOrden, "Tracking: No existe la orden");
         Tracking memory tracking = listaTracking[idOrden];
-        require(tracking.estado > 0, "Tracking: No existe la orden");
+        //require(tracking.estado > 0, "Tracking: No existe la orden");
         return tracking;
     }
 
-    // funcion para area interna
+    /// @notice Permite a los usuarios de las areas internas de la empresa
+    ///         con rol WORKFLOW_ROLE , poder atender un pedido
+    /// @param idOrden identificador de la orden
+    /// @return indicador si la operacion de ejecuto correctamente
     function atenderPedido(
         uint256 idOrden
     ) external onlyRole(WORKFLOW_ROLE) returns (bool) {
@@ -247,6 +376,12 @@ contract OrdenCompra is
         return true;
     }
 
+    /// @notice Permite registrar la entrega del pedido al cliente
+    ///         los usuarios con rol COURIER_ROLE pueden utilizar este 
+    ///         metodo
+    /// @param idOrden identificador de la orden
+    /// @return indicador si la operacion de ejecuto correctamente
+     
     function entregarCliente(
         uint256 idOrden
     ) external onlyRole(COURIER_ROLE) returns (bool) {
@@ -264,8 +399,6 @@ contract OrdenCompra is
         uint256 _fecha = block.timestamp;
         tracking.arrival = _fecha;
         tracking.departure = 0;
-        tracking.from = tracking.from;
-        tracking.to = tracking.to;
 
         // actualizar movimiento del pedido
         listaTracking[idOrden] = tracking;

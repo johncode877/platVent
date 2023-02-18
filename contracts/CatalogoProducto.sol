@@ -6,6 +6,13 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol"
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
+/// @title Catalogo de Productos
+/// @author John Neil Sevillano Colina
+/// @author Luis Gangas Vasquez
+/// @author Segundo Humberto Melendez Fernandez
+/// @notice Puedes usar este contrato para cargar/actualizar productos
+/// @custom:experimental Este es un contrato a modo de prueba.
+
 contract CatalogoProducto is
     Initializable,
     PausableUpgradeable,
@@ -54,7 +61,7 @@ contract CatalogoProducto is
 
     function validarExiste(
         string memory _nombre
-    ) internal returns (uint256, uint256) {
+    ) internal view returns (uint256, uint256) {
         ProductoDetail memory item;
         for (uint256 i = 0; i < listaProductos.length; i++) {
             item = listaProductos[i];
@@ -71,6 +78,9 @@ contract CatalogoProducto is
         return (0, 0);
     }
 
+    /// @notice Agrega un nuevo producto
+    /// @param _producto es el producto a añadir
+    /// @return El indice del producto añadido
     function agregarProducto(
         ProductoDetail memory _producto
     ) public onlyRole(PRODUCT_ROLE) returns (uint256) {
@@ -109,12 +119,11 @@ contract CatalogoProducto is
         return indice;
     }
 
-    /************************************************************************
-     *
-     *   string memory _nombre: Nombre del producto
-     *   uint256 _newTotal: Nuevo stock del producto
-     *   uint256 _precio: Nuevo precio del producto
-     *************************************************************************/
+    /// @notice Actualiza un nuevo producto
+    /// @param _nombre es nombre del producto
+    /// @param _newTotal nuevo stock del producto
+    /// @param _precio nuevo precio del producto
+    /// @return indicador si se realizo la actualizacion
     function actualizarProducto(
         string memory _nombre,
         uint256 _newTotal,
@@ -143,20 +152,21 @@ contract CatalogoProducto is
         return true;
     }
 
-    /************************************************************************
-     *
-     *   string _id: identificador del producto
-     *   uint256 _newTotal: Nuevo stock del producto
-     *   uint256 _precio: Nuevo precio del producto
-     *************************************************************************/
+    /// @notice Actualiza un nuevo producto por id
+    /// @param _id indice del producto a modificar
+    /// @param _newTotal nuevo stock del producto
+    /// @param _precio nuevo precio del producto
+    /// @return indicador si se realizo la actualizacion
     function actualizarProductoPorId(
         uint256 _id,
         uint256 _newTotal,
         uint256 _precio
     ) public onlyRole(PRODUCT_ROLE) returns (bool) {
-        ProductoDetail memory item = listaProductos[_id];
+        uint256 lpSize = listaProductos.length;
 
-        require(item.estado > 0, "El producto no esta registrado");
+        require(_id < lpSize, "El producto no esta registrado");
+
+        ProductoDetail memory item = listaProductos[_id];
 
         if (_newTotal > 0) {
             item.total = _newTotal;
@@ -170,9 +180,12 @@ contract CatalogoProducto is
         return true;
     }
 
+    /// @notice Ver detalle del producto
+    /// @param _nombre nombre del producto
+    /// @return objeto producto
     function verDetalleProducto(
         string memory _nombre
-    ) public returns (ProductoDetail memory) {
+    ) public view returns (ProductoDetail memory) {
         uint256 indice;
         uint256 estado;
         (indice, estado) = validarExiste(_nombre);
@@ -186,14 +199,23 @@ contract CatalogoProducto is
         return item;
     }
 
+    /// @notice Ver detalle del producto por Id
+    /// @param _id identificador del producto
+    /// @return objeto producto
     function verDetalleProductoPorId(
         uint256 _id
-    ) public returns (ProductoDetail memory) {
+    ) public view returns (ProductoDetail memory) {
+        uint256 lpSize = listaProductos.length;
+
+        require(_id < lpSize, "El producto no existe o no esta registrado");
+
         ProductoDetail memory item = listaProductos[_id];
-        require(item.estado > 0, "El producto no existe o no esta registrado");
+
         return item;
     }
 
+    /// @notice Obtienen la lista de todos los productos registrados
+    /// @return lista de productos registrados
     function obtenerTodos() external view returns (ProductoDetail[] memory) {
         return listaProductos;
     }
